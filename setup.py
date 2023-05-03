@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='sphere_snap',
-    version='0.1.3',    
+    version='0.1.0',    
     description='A quick and easy to use library for reprojecting various image types',
     long_description=long_description,
     long_description_content_type='text/markdown',

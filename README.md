@@ -15,6 +15,13 @@ A quick and easy to use library for reprojecting various image types. (inspired 
 
 
 ## How to use it
+```python
+import sphere_snap.utils as snap_utils
+import sphere_snap.sphere_coor_projections as sphere_proj
+from sphere_snap.snap_config import SnapConfig
+from sphere_snap.sphere_snap import SphereSnap
+```
+
 ## Snap to perspective from equirectangular
 ```python
 snap_config = SnapConfig( [0,0,0,1], (1400,1400),(120,120), equi_img.shape[:2], source_img_type="equi")
