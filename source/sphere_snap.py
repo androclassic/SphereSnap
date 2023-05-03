@@ -416,7 +416,7 @@ class SphereSnap:
                 ])
                             
         xyz = npy.ones((uv.shape[0], 3), npy.float64)
-        fov_halftan = npy.tan(npy.radians(npy.array(self.source_img_fov_deg) / 2))
+        fov_halftan = npy.tan(npy.radians(npy.array(self.snap_config.source_img_fov_deg) / 2))
         xyz[:, :2] = ((2*uv)-1) * fov_halftan
         xyz = self.__normalize_xyz(xyz)
         return xyz
