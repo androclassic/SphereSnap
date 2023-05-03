@@ -1,5 +1,5 @@
 import numpy as npy
-from source import custom_cupy_wrap, convert_to_cupy, convert_to_numpy, to_np
+from sphere_snap import custom_cupy_wrap, convert_to_cupy, convert_to_numpy, to_np
 
 @custom_cupy_wrap(convert_to_cupy, convert_to_numpy)
 def xyz2spherical(xyz, np=npy):

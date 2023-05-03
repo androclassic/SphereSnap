@@ -5,11 +5,11 @@ import numpy as npy
 from scipy.spatial.transform import Rotation as R
 from math import isclose
 
-import source.utils as snap_utils
-import source.sphere_coor_projections as sphere_proj
-from source.snap_config import SnapConfig
-from source import cupy_available, to_cp, to_np
-from source import custom_cupy_wrap, convert_to_cupy, convert_to_numpy
+import sphere_snap.utils as snap_utils
+import sphere_snap.sphere_coor_projections as sphere_proj
+from sphere_snap.snap_config import SnapConfig
+from sphere_snap import cupy_available, to_cp, to_np
+from sphere_snap import custom_cupy_wrap, convert_to_cupy, convert_to_numpy
 
 
 class SphereSnap:

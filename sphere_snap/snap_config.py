@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-import source.utils as snap_utils
-import source.sphere_coor_projections as sphere_proj
+import sphere_snap.utils as snap_utils
+import sphere_snap.sphere_coor_projections as sphere_proj
 
 
 class SnapConfig:
