@@ -1,6 +1,17 @@
+"""
+sphere_snap.
+
+A quick and easy to use library for reprojecting various image types.
+"""
 from __future__ import absolute_import
 import logging
 import numpy as np
+
+
+__version__ = "0.1.0"
+__author__ = 'Andrei Georgescu'
+__credits__ = ''
+
 
 is_cupy_available = None
 
