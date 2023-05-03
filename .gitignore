@@ -1,3 +1,5 @@
 
 *.pyc
 notebook/.ipynb_checkpoints/simple_test-checkpoint.ipynb
+*.whl
+sphere_snap/.DS_Store
