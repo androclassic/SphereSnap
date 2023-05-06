@@ -9,11 +9,11 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='sphere_snap',
-    version='1.0.1',    
+    version='1.0.3',    
     description='A quick and easy to use library for reprojecting various image types',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://androclassic.github.io/SphereSnap/sphere_snap.html',
+    url='https://github.com/androclassic/SphereSnap',
     author='Andrei Georgescu',
     author_email='andrei.georgescu@yahoo.com',
     license='MIT License',
