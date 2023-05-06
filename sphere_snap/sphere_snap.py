@@ -11,7 +11,7 @@ import sphere_snap.sphere_coor_projections as sphere_proj
 from sphere_snap.snap_config import SnapConfig, ImageProjectionType
 from sphere_snap import cupy_available, to_cp, to_np
 from sphere_snap import custom_cupy_wrap, convert_to_cupy, convert_to_numpy
-
+from sphere_snap.radial_distortion import RadialDistorter
 
 class SphereSnap:
     """
@@ -212,6 +212,20 @@ class SphereSnap:
                                 for i in range(source_img.shape[2])], axis=-1)
         return pers_img.astype(npy.uint8)
 
+    @staticmethod
+    def __undistort_coors(u_coor, hw, dist_coeff):
+        """
+        Extracts the raw coordinates from a list of coordinates in the undistorted image
+        """
+        distortion_map = RadialDistorter.get().coor_mapping(hw, dist_coeff)
+        u_coor = u_coor.astype(int)
+        # clip values
+        in_bounds_indices = snap_utils.check_uv_in_bounds(u_coor, distortion_map.shape[:2])
+        # extract real coordinates from distortion map
+        coor = distortion_map[u_coor[in_bounds_indices, 1], u_coor[in_bounds_indices, 0]]
+        # swap from vu, to uv
+        coor[..., [0, 1]] = coor[..., [1, 0]]
+        return coor, in_bounds_indices
 
     @custom_cupy_wrap(convert_to_cupy, convert_to_numpy)
     def image2spherical(coors, snap_config, np=npy):
@@ -225,8 +239,8 @@ class SphereSnap:
             return sphere_proj.equi_coor2spherical._original(coors, s_hw, np=np)
         elif snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
             return sphere_proj.fisheye180_coor2spherical._original(coors, s_hw, np=np)
-
-        if snap_config.source_dist_coeff is not None:
+        elif snap_config.source_img_type == ImageProjectionType.RADIAL_DISTORTED:
+            assert snap_config.source_dist_coeff is not None, "Missing distortion coefficients !"
             dist_coeff = snap_config.source_dist_coeff
             # change from xy to yx
             coors = coors[...,[1,0]]
@@ -249,14 +263,29 @@ class SphereSnap:
         :param spherical: spherical coordinates for the sphere surface points that we want to project
         :param snap_config: a snap_config object containing metadata of the snap
         """
-        if snap_config.source_img_type == "plane":
-            if snap_config.source_dist_coeff is not None:
-                assert False, "Not implemented yet !"
-            else:
-                coor = sphere_proj.pinhole_spherical2coor._original(spherical,
-                                                                    snap_config.source_img_fov_deg,
-                                                                    snap_config.source_img_hw, 
-                                                                    (0,0), 0, np=np)
+        if snap_config.source_img_type == ImageProjectionType.PINHOLE:
+            coor = sphere_proj.pinhole_spherical2coor._original(spherical,
+                                                                snap_config.source_img_fov_deg,
+                                                                snap_config.source_img_hw, 
+                                                                (0,0), 0, np=np)
+            return coor
+        elif snap_config.source_img_type == ImageProjectionType.RADIAL_DISTORTED:
+            assert snap_config.source_dist_coeff is not None, "Missing distortion coefficients !"
+            coor = sphere_proj.pinhole_spherical2coor._original(spherical,
+                                                                snap_config.source_img_fov_deg,
+                                                                snap_config.source_img_hw, 
+                                                                (0,0), 0, np=np)
+            coor = to_np(coor)
+            distorted_coor, in_bounds_indices = SphereSnap.__undistort_coors(coor,
+                                                                            to_np(snap_config.source_img_hw),
+                                                                            to_np(snap_config.source_dist_coeff))
+
+            coor[in_bounds_indices] = distorted_coor
+
+            coor = sphere_proj.pinhole_spherical2coor._original(spherical,
+                                                                snap_config.source_img_fov_deg,
+                                                                snap_config.source_img_hw, 
+                                                                (0,0), 0, np=np)
             return coor
 
         elif snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
@@ -357,7 +386,10 @@ class SphereSnap:
         :param return_polar: If true, it will return also the sphere projection of the points in polar coordinates
         """
         if source_dist_coeff is not None:
-            assert False , "Not implemented yet!"
+            distortion_map = RadialDistorter.get().coor_mapping(hw, source_dist_coeff)
+            coor, polar = sphere_proj.sample_polygon(points, distortion_map.shape[:2], _)
+            coor, in_bounds_indices = SphereSnap.__undistort_coors(coor, hw, source_dist_coeff)
+            polar = polar[in_bounds_indices]        
         else:
             coor, polar = snap_utils.sample_polygon(points, hw, source_img_fov_deg)
 
@@ -421,6 +453,7 @@ class SphereSnap:
         xyz[:, :2] = ((2*uv)-1) * fov_halftan
         xyz = self.__normalize_xyz(xyz)
         return xyz
+
 
     def __normalize_xyz(self, xyz):
         """

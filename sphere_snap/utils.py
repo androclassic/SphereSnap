@@ -1,8 +1,9 @@
 import numpy as npy
 from scipy.ndimage import map_coordinates
 from scipy.spatial.transform import Rotation as R
-
+from scipy import ndimage
 from . import cupy_available, custom_cupy_wrap, convert_to_cupy, convert_to_numpy, to_np
+
 
 __CONSISTENCY_THRESHOLD = 0.12
 
@@ -177,3 +178,18 @@ def ensure_fov_res_consistency(fov, hw, threshold=__CONSISTENCY_THRESHOLD):
 def rotation(yaw, pitch, roll):
     return R.from_euler("yxz",[yaw,pitch,roll], degrees=True)
 
+
+
+def interpolate_nans(A):
+    # all large empty space in the image are set to zero
+    k_size = 9
+    k = npy.ones((k_size,k_size))
+    B = ndimage.convolve(A, k, mode='constant', cval=-1)
+    A[B==-(k_size*k_size)] = -1e-1
+    # holes smaller than kernel size are interpolated
+    ok = A > 0
+    xp = ok.ravel().nonzero()[0]
+    fp = A[ok]
+    x  = (A==-1).ravel().nonzero()[0]
+    A[A==-1] = npy.interp(x, xp, fp)
+    return A
