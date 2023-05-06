@@ -1,5 +1,6 @@
 import numpy as npy
 from scipy.ndimage import map_coordinates
+from scipy.spatial.transform import Rotation as R
 
 from . import cupy_available, custom_cupy_wrap, convert_to_cupy, convert_to_numpy, to_np
 
@@ -172,4 +173,7 @@ def ensure_fov_res_consistency(fov, hw, threshold=__CONSISTENCY_THRESHOLD):
     if npy.abs(1 - px_ar) > threshold:
         fov = compute_fovs([focal_length, focal_length], hw)
     return fov
+
+def rotation(yaw, pitch, roll):
+    return R.from_euler("yxz",[yaw,pitch,roll], degrees=True)
 

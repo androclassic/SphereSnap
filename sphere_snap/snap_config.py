@@ -2,6 +2,14 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import sphere_snap.utils as snap_utils
 import sphere_snap.sphere_coor_projections as sphere_proj
+from enum import Enum
+
+class ImageProjectionType(Enum):
+    EQUI = 'equirectangular'
+    PINHOLE = 'pinhole'
+    FISHEYE_180 = 'fisheye180'
+    RADIAL_DISTORTED = 'distorted_pinhole'
+
 
 
 class SnapConfig:
@@ -15,7 +23,7 @@ class SnapConfig:
                  source_img_hw,
                  source_img_fov_deg=None,
                  source_dist_coeff=None,
-                 source_img_type="equi"
+                 source_img_type=ImageProjectionType.EQUI
                 ):
 
         """
@@ -40,7 +48,7 @@ class SnapConfig:
                                 {lambda, center_offset_x, center_offset_y} (Default: None)
         :param source_img_hw: a tuple containing source image size(height, width)
         :param source_img_fov_deg: a tuple containing (hfov, vfov) of the perspective source image, if this is None the image is equirectangular
-        :param source_img_type: type of the source image eg. (plane, equi, fisheye180), default is equi.
+        :param source_img_type: ImageProjectionType of the source image eg. (PINHOLE, EQUI, FISHEYE_180, RADIAL_DISTORTED), default is EQUI.
         """
 
         rot_matrix = R.from_quat(orientation_quat).as_matrix()
@@ -74,7 +82,7 @@ class SnapConfig:
                         source_img_hw,
                         source_img_fov_deg=None,
                         source_dist_coeff=None,
-                        source_img_type="equi",
+                        source_img_type=ImageProjectionType.EQUI,
                         quaternion = None,
                         ):
         """

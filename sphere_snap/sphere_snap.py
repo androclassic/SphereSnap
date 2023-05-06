@@ -4,10 +4,11 @@ import numpy as npy
 
 from scipy.spatial.transform import Rotation as R
 from math import isclose
+import copy
 
 import sphere_snap.utils as snap_utils
 import sphere_snap.sphere_coor_projections as sphere_proj
-from sphere_snap.snap_config import SnapConfig
+from sphere_snap.snap_config import SnapConfig, ImageProjectionType
 from sphere_snap import cupy_available, to_cp, to_np
 from sphere_snap import custom_cupy_wrap, convert_to_cupy, convert_to_numpy
 
@@ -21,7 +22,7 @@ class SphereSnap:
         """
         Given the input parameters, creates an SphereSnap object
         """
-        self.snap_config = snap_config
+        self.snap_config = copy.deepcopy(snap_config) 
         self.snap_config.to_numpy()
         self.sphere_polygon_xyz = self.__create_snap_sphere_polygon()
         self.full_img_sphere_polygon_xyz = self.__create_source_img_sphere_polygon()
@@ -186,11 +187,11 @@ class SphereSnap:
 
     def snap_to_perspective(self, source_img):
         # sanity checks
-        if self.snap_config.source_img_type == "equi":
+        if self.snap_config.source_img_type == ImageProjectionType.EQUI:
             h, w = self.snap_config.source_img_hw
             ar = w/h
             assert isclose(ar, 2, abs_tol=1e-2), f"Aspect ratio for equirectangular image is not 2:1. Resolution: [{w, h}]"
-        elif self.snap_config.source_img_type == "fisheye180":
+        elif self.snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
             h, w = self.snap_config.source_img_hw
             ar = w/h
             assert isclose(ar, 1, abs_tol=1e-2), f"Aspect ratio for fisheye180 image is not 1:1. Resolution: [{w, h}]"
@@ -206,7 +207,7 @@ class SphereSnap:
             source_img = cv2.resize(source_img, tuple(self.snap_config.source_img_hw[::-1]))
 
         # sample coordinates and create image
-        warp_mode = True if self.snap_config.source_img_type=="equi" else False
+        warp_mode = True if self.snap_config.source_img_type==ImageProjectionType.EQUI else False
         pers_img = npy.stack([snap_utils.sample_from_img(source_img[..., i], src_coor, clamp=warp_mode)
                                 for i in range(source_img.shape[2])], axis=-1)
         return pers_img.astype(npy.uint8)
@@ -220,9 +221,9 @@ class SphereSnap:
         """
         s_hw = to_cp(snap_config.source_img_hw)
 
-        if snap_config.source_img_type == "equi":
+        if snap_config.source_img_type == ImageProjectionType.EQUI:
             return sphere_proj.equi_coor2spherical._original(coors, s_hw, np=np)
-        elif snap_config.source_img_type == "fisheye180":
+        elif snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
             return sphere_proj.fisheye180_coor2spherical._original(coors, s_hw, np=np)
 
         if snap_config.source_dist_coeff is not None:
@@ -258,16 +259,16 @@ class SphereSnap:
                                                                     (0,0), 0, np=np)
             return coor
 
-        elif snap_config.source_img_type == "fisheye180":
+        elif snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
             return sphere_proj.fisheye180_spherical2coor._original(spherical, snap_config.source_img_hw, np=np)
-        elif snap_config.source_img_type == "equi":
+        elif snap_config.source_img_type == ImageProjectionType.EQUI:
             return sphere_proj.equi_spherical2coor._original(spherical, snap_config.source_img_hw, np=np)
         else:
             assert False, "Not implemented yet !"
 
 
     @staticmethod
-    def merge_multiple_snaps(output_hw, sphere_snaps, imgs, merge_method='average', target_type="equi"):
+    def merge_multiple_snaps(output_hw, sphere_snaps, imgs, merge_method='average', target_type=ImageProjectionType.EQUI):
         """
         Given a list of images extracted from a source image, re-create an image 
         return the full image obtained from the source views
@@ -275,7 +276,7 @@ class SphereSnap:
         :param views: a list of views we want to merge back in the full image
         :param imgs: a list of imgs coresponding to the views 
         :param merge_method: average, sum, max, last
-        :param target_type: image projection type (equi, fisheye180)
+        :param target_type: image projection type (ImageProjectionType.EQUI, ImageProjectionType.FISHEYE_180..)
         """
 
         imgs = [to_cp(img) for img in imgs]
@@ -304,7 +305,7 @@ class SphereSnap:
         img_all_coors = sphere_proj.get_2D_coor_grid._pipe(output_hw)
 
         # exclude region outside the circle
-        if cp_snap.source_img_type == "fisheye180":
+        if cp_snap.source_img_type == ImageProjectionType.FISHEYE_180:
             xy = img_all_coors-(np.array(output_hw)/2)
             r = np.linalg.norm(xy, axis=-1)
             img_all_coors = img_all_coors[r<(output_hw[0]/2)]
