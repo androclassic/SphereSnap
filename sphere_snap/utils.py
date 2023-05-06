@@ -179,13 +179,12 @@ def rotation(yaw, pitch, roll):
     return R.from_euler("yxz",[yaw,pitch,roll], degrees=True)
 
 
-
 def interpolate_nans(A):
     # all large empty space in the image are set to zero
     k_size = 9
     k = npy.ones((k_size,k_size))
     B = ndimage.convolve(A, k, mode='constant', cval=-1)
-    A[B==-(k_size*k_size)] = -1e-1
+    A[B<0] = -1e-1
     # holes smaller than kernel size are interpolated
     ok = A > 0
     xp = ok.ravel().nonzero()[0]

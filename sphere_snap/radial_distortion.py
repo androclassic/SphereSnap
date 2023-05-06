@@ -16,23 +16,7 @@ from . import custom_cupy_wrap, convert_to_cupy, convert_to_numpy, to_np, to_cp
 warnings.simplefilter('ignore', category=AstropyWarning)
 
 import numpy as npy
-@custom_cupy_wrap(convert_to_cupy, convert_to_numpy)
-def __construct_map(distorted_coor, undistorted_coor, res_hw, np=npy):
-    # creates a map between distorted and undistorted coordinates
-    # this map might contain NaN values where there are no distortion calculated
-    
-    new_hw = (res_hw*undistorted_coor.max(axis=0)).astype(int)
-    distorted_uv = np.array(undistorted_coor*(res_hw-1)).astype(int)
 
-    # we use unique for selecting a coordinate omly once
-    # use numpy method as unique is not fully suported in cupy 
-    distorted_uv = to_np(distorted_uv)
-    distorted_uv, unique_indices = npy.unique(distorted_uv, return_index=True, axis=0)
-    dv, du = npy.split(distorted_uv, 2, axis=-1)
-
-    map_undist2coef = np.ones((int(new_hw[0]), int(new_hw[1]), 2)).astype(np.float32) * np.nan
-    map_undist2coef[dv, du] = distorted_coor[unique_indices].reshape(-1, 1, 2)/res_hw
-    return map_undist2coef, new_hw
 
 
 class RadialDistorter:
@@ -57,28 +41,27 @@ class RadialDistorter:
         if  thread_id not in RadialDistorter.__thread_instances_dict:
             RadialDistorter.__thread_instances_dict[thread_id] = self
             self.__dist_mapping_dict = dict()
-            self.last_img = None
-            self.last_img_u = None
         else:
             raise Exception("This class is a Singleton!")
 
-    def rectifiy_img(self, distorted_img, dist_coeff, ignore_cache=False, same_resolution = True):
-        assert len(dist_coeff) == 3, "distortion parameters size is not correct"
-
-        #distort only if the images is different than previous one
-        if ignore_cache is False and id(self.last_img) == id(distorted_img):
-            return self.last_img_u
-
-        img_hw = distorted_img.shape[:2]
-        mapping = RadialDistorter.get().coor_mapping(img_hw, dist_coeff,
-                ignore_cache = ignore_cache,
-                same_resolution = same_resolution)
-        undistorted_img = cv2.remap(distorted_img, mapping[...,1], (mapping[...,0]), cv2.INTER_LINEAR)
-        self.last_img = distorted_img
-        self.last_img_u = undistorted_img
-
-        return undistorted_img
+    @staticmethod
+    @custom_cupy_wrap(convert_to_cupy, convert_to_numpy)
+    def __construct_map(distorted_coor, undistorted_coor, res_hw, np=npy):
+        # creates a map between distorted and undistorted coordinates
+        # this map might contain NaN values where there are no distortion calculated
         
+        new_hw = (res_hw*undistorted_coor.max(axis=0)).astype(int)
+        distorted_uv = np.array(undistorted_coor*(res_hw-1)).astype(int)
+
+        # we use unique for selecting a coordinate omly once
+        # use numpy method as unique is not fully suported in cupy 
+        distorted_uv = to_np(distorted_uv)
+        distorted_uv, unique_indices = npy.unique(distorted_uv, return_index=True, axis=0)
+        dv, du = npy.split(distorted_uv, 2, axis=-1)
+
+        map_undist2coef = np.ones((int(new_hw[0]), int(new_hw[1]), 2)).astype(np.float32) * np.nan
+        map_undist2coef[dv, du] = distorted_coor[unique_indices].reshape(-1, 1, 2)/res_hw
+        return map_undist2coef, new_hw
 
     def coor_mapping(self, res_hw, dist_coeff, ignore_cache=False, same_resolution = True):
         dist_coeff = np.array(dist_coeff)
@@ -88,15 +71,15 @@ class RadialDistorter:
             logging.debug(f"{map_id} was constructed")
             map_hw = (np.array(res_hw)/RadialDistorter.__scale_factor).astype(int)
             #use _pipe so that all are done with cupy if available and only convert it tu cpu at the end
-            distorted_coor = snap_utils.get_img_coor_matrix._pipe(map_hw)
+            distorted_coor = sphere_proj.get_2D_coor_grid._pipe(map_hw)
             distorted_coor[...,[0,1]] = distorted_coor[...,[1,0]]
-            undistorted_coor = snap_utils.undistort._pipe(distorted_coor,
+            undistorted_coor = sphere_proj.undistort._pipe(distorted_coor,
                      to_cp(dist_coeff),
                      to_cp(np.array(map_hw)),
                      normalize_values = same_resolution
                     )
 
-            mapping, new_map_hw = __construct_map._pipe(distorted_coor, undistorted_coor, to_cp(np.array(map_hw))) 
+            mapping, new_map_hw = RadialDistorter.__construct_map._pipe(distorted_coor, undistorted_coor, to_cp(np.array(map_hw))) 
             mapping = to_np(mapping)
             new_map_hw = to_np(new_map_hw)
 

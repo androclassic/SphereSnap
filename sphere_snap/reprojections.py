@@ -10,7 +10,7 @@ from sphere_snap.top_view import TopViewProjector
 def __rot(yaw, pitch):
     return R.from_euler("yxz",[yaw,-pitch,0], degrees=True).as_quat()
 
-def __get_cube_map_faces(face_size=1440, source_img_hw=(2000,4000), source_img_type=ImageProjectionType.EQUI):
+def get_cube_map_faces(face_size=1440, source_img_hw=(2000,4000), source_img_type=ImageProjectionType.EQUI):
     
     snap_configs = [SnapConfig( __rot(90*i,0), (face_size,face_size),(90,90), source_img_hw, source_img_type=source_img_type)
                         for i in range(4)]
@@ -29,7 +29,7 @@ def equi2cubemap(equi_img, face_size=None):
     Returns a list of 6 images representing cubemap faces [ f, l, r, b, t, b]
     """
     face_res = face_size if face_size is not None else equi_img.shape[1]//4
-    cube_configs = __get_cube_map_faces(face_size=face_res, source_img_hw=equi_img.shape[:2])
+    cube_configs = get_cube_map_faces(face_size=face_res, source_img_hw=equi_img.shape[:2])
     cube_faces_snaps = [SphereSnap(c) for c in cube_configs]
     cube_faces_imgs = [snap.snap_to_perspective(equi_img) for snap in cube_faces_snaps]
     return cube_faces_imgs
@@ -43,7 +43,7 @@ def cubemap2equi(cubemap_faces, out_hw=None):
     """
     face_size = cubemap_faces[0].shape[0]
     equi_hw = out_hw if out_hw is not None else np.array([2*face_size, 4*face_size]).astype(int)
-    cube_configs = __get_cube_map_faces(face_size=face_size, source_img_hw=equi_hw)
+    cube_configs = get_cube_map_faces(face_size=face_size, source_img_hw=equi_hw)
     cube_faces_snaps = [SphereSnap(c) for c in cube_configs]
     out_equi = SphereSnap.merge_multiple_snaps( equi_hw, 
                                                 cube_faces_snaps, # snap object specifies destination position
@@ -63,14 +63,14 @@ def cubemap2fisheye(cubemap_faces, h_angle_offset = 0, out_hw=None):
     """
     face_size = cubemap_faces[0].shape[0]
     fisheye_hw = out_hw if out_hw is not None else np.array([2*face_size, 2*face_size]).astype(int)
-    cube_configs = __get_cube_map_faces(face_size=face_size)
-    cube_faces_snaps = [SphereSnap(c) for c in cube_configs]
+    cube_configs = get_cube_map_faces(face_size=face_size)
 
     for snap_config in cube_configs:
         r = R.from_euler("yxz",[h_angle_offset,0,0], degrees=True).as_matrix()
         m = snap_config.transform.as_matrix().dot(r)
         snap_config.set_transform(R.from_matrix(m)) 
 
+    cube_faces_snaps = [SphereSnap(c) for c in cube_configs]
     out_img = SphereSnap.merge_multiple_snaps( fisheye_hw, 
                                                 cube_faces_snaps, # snap object specifies destination position
                                                 cubemap_faces, # snap image contains planar image pixels

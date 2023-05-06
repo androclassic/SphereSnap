@@ -271,21 +271,16 @@ class SphereSnap:
             return coor
         elif snap_config.source_img_type == ImageProjectionType.RADIAL_DISTORTED:
             assert snap_config.source_dist_coeff is not None, "Missing distortion coefficients !"
+            distortion_map = RadialDistorter.get().coor_mapping(snap_config.source_img_hw, snap_config.source_dist_coeff)
             coor = sphere_proj.pinhole_spherical2coor._original(spherical,
                                                                 snap_config.source_img_fov_deg,
-                                                                snap_config.source_img_hw, 
+                                                                np.array(distortion_map.shape[:2]), 
                                                                 (0,0), 0, np=np)
             coor = to_np(coor)
             distorted_coor, in_bounds_indices = SphereSnap.__undistort_coors(coor,
                                                                             to_np(snap_config.source_img_hw),
                                                                             to_np(snap_config.source_dist_coeff))
-
             coor[in_bounds_indices] = distorted_coor
-
-            coor = sphere_proj.pinhole_spherical2coor._original(spherical,
-                                                                snap_config.source_img_fov_deg,
-                                                                snap_config.source_img_hw, 
-                                                                (0,0), 0, np=np)
             return coor
 
         elif snap_config.source_img_type == ImageProjectionType.FISHEYE_180:
