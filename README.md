@@ -1,5 +1,8 @@
 # SphereSnap
-A quick and easy to use library for reprojecting various image types. (inspired by http://paulbourke.net/panorama/sphere2persp/ ) 
+A quick and easy to use library for reprojecting various image types. (inspired by http://paulbourke.net/panorama/sphere2persp/ ).<br />
+The module will use CuPy if detected for accelerating computation. The library can be use simply for reprojecting from one format to another but
+also for more sophisticated usecases of manipulating parts of the image or polygons. 
+
 
 ## Examples and usecases
 ### Reprojecting equirectangular image into pinhole-camera images with customizable FoV and resolution
@@ -10,13 +13,14 @@ A quick and easy to use library for reprojecting various image types. (inspired 
 <img width="727" alt="image" src="https://user-images.githubusercontent.com/1941529/236621503-b5cf5e22-6a89-41c1-8765-3c5d23c1df1d.png">
 
 ### Create fisheye images from equirectangular or cubemap images
-<img width="320" alt="image" src="https://user-images.githubusercontent.com/1941529/236621560-cf9f5344-d041-4769-8b86-c52efa2958f6.png">
+<img width="250" alt="image" src="https://user-images.githubusercontent.com/1941529/236621560-cf9f5344-d041-4769-8b86-c52efa2958f6.png">
+<img width="500" alt="image" src="https://user-images.githubusercontent.com/1941529/236662589-e4af0d84-319b-4f10-a118-3a296aa33554.png">
 
 ### Create top view images from equirectangular/fisheye/planar images
-<img width="320" alt="image" src="https://user-images.githubusercontent.com/1941529/236621633-4c6b30b5-0141-4a43-95fd-e93409d56d3e.png">
+<img width="850" alt="image" src="https://user-images.githubusercontent.com/1941529/236662421-3854c164-b856-4b1e-9447-e997db5713d3.png">
 
 ### Correct radially distorted images
-<img width="320" alt="image" src="https://user-images.githubusercontent.com/1941529/236621823-a32b57f9-ec4c-4d8c-b45d-f5cda1dbaecc.png">
+<img width="600" alt="image" src="https://user-images.githubusercontent.com/1941529/236621823-a32b57f9-ec4c-4d8c-b45d-f5cda1dbaecc.png">
 
 
 ## How to use it
